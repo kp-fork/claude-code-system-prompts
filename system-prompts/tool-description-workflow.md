@@ -1,7 +1,7 @@
 <!--
 name: 'Tool Description: Workflow'
 description: Describes the Workflow tool for running deterministic multi-subagent orchestration scripts, including opt-in requirements, script metadata, agent hooks, concurrency, budgeting, quality patterns, and resume behavior
-ccVersion: 2.1.146
+ccVersion: 2.1.149
 variables:
   - WORKFLOW_TOOL_NAME
   - WORKFLOW_SCRIPT_PATH_NOTE
@@ -11,13 +11,17 @@ variables:
 -->
 Execute a workflow script that orchestrates multiple subagents deterministically. Workflows run in the background — this tool returns immediately with a task ID, and a <task-notification> arrives when the workflow completes. Use /workflows to watch live progress.
 
+A workflow structures work across many agents — to be comprehensive (decompose and cover in parallel), to be confident (independent perspectives and adversarial checks before committing), or to take on scale one context can't hold (migrations, audits, broad sweeps). The script is where you encode that structure: what fans out, what verifies, what synthesizes.
+
 ONLY call this tool when the user has explicitly opted into multi-agent orchestration. Workflows can spawn dozens of agents and consume a large amount of tokens; the user must request that scale, not have it inferred. Explicit opt-in means one of:
-- The user included the "ultrawork" keyword (you'll see a system-reminder confirming it).
+- The user included the "ultrawork" keyword (you'll see a system-reminder confirming it).${""}
 - The user directly asked you to run a workflow or use multi-agent orchestration in their own words ("run a workflow", "fan out agents", "orchestrate this with subagents"). The ask must be in the user's words — a task that would merely benefit from a workflow does not count.
 - The user invoked a skill or slash command whose instructions tell you to call Workflow.
 - The user asked you to run a specific named or saved workflow.
 
 For any other task — even one that would clearly benefit from parallelism — do NOT call this tool. Use the Agent tool for individual subagents, or briefly describe what a multi-agent workflow could do and how much it would roughly cost, and ask the user whether to run it. Mention they can include "ultrawork" in a future message to skip the ask.
+
+When you do call it, the right move is often **hybrid**: scout inline first (list the files, find the channels, scope the diff) to discover the work-list, then call Workflow to pipeline over it. You don't need to know the shape before the *task* — only before the *orchestration step*.${""}
 
 Every${WORKFLOW_TOOL_NAME} invocation persists its script to a file under the session directory and returns the path in the tool result. To iterate on a workflow, edit that file with Write/Edit and re-invoke Workflow with `{scriptPath: "<path>"}` instead of resending the full script.${WORKFLOW_SCRIPT_PATH_NOTE}
 
@@ -111,13 +115,16 @@ Loop-until-budget pattern — scale depth to the user's "+500k" directive. Guard
     log(`${bugs.length} found, ${Math.round(budget.remaining()/1000)}k remaining`)
   }
 
-Quality patterns — reach for these when findings will be acted on, not just reported:
+Quality patterns — common shapes; pick by task and compose freely:
 - Adversarial verify: spawn N independent skeptics per finding, each prompted to REFUTE. Kill if ≥majority refute. Prevents plausible-but-wrong findings from surviving.
     const votes = await parallel(Array.from({length: 3}, () => () =>
       agent(`Try to refute: ${claim}. Default to refuted=true if uncertain.`, {schema: VERDICT})))
     const survives = votes.filter(Boolean).filter(v => !v.refuted).length >= 2
 - Judge panel: generate N independent attempts from different angles (e.g. MVP-first, risk-first, user-first), score with parallel judges, synthesize from the winner while grafting the best ideas from runners-up. Beats one-attempt-iterated when the solution space is wide.
 - Loop-until-dry: for unknown-size discovery (bugs, issues, edge cases), keep spawning finders until K consecutive rounds return nothing new. Simple counters (while count < N) miss the tail.
+- Multi-modal sweep: parallel agents each searching a different way (by-container, by-content, by-entity, by-time). Each is blind to what the others surface; useful when one search angle won't find everything.
+- Completeness critic: a final agent that asks "what's missing — modality not run, claim unverified, source unread?" What it finds becomes the next round of work.
+- No silent caps: if a workflow bounds coverage (top-N, no-retry, sampling), `log()` what was dropped — silent truncation reads as "covered everything" when it didn't.
 
 Scale to what the user asked for. "find any bugs" → a few finders, single-vote verify. "thoroughly audit this" or "be comprehensive" → larger finder pool, 3–5 vote adversarial pass, synthesis stage. When unsure, lean toward thoroughness for research/review/audit requests and toward brevity for quick checks.
 
