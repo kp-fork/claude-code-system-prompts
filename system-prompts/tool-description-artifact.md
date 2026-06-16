@@ -1,11 +1,11 @@
 <!--
 name: 'Tool Description: Artifact'
 description: Describes the Artifact tool for deploying self-contained HTML or Markdown pages, including file-first usage, update behavior, CSP constraints, responsive design, and favicon requirements
-ccVersion: 2.1.176
+ccVersion: 2.1.178
 -->
 Render an HTML or Markdown file to an Artifact — a default-private web page hosted on claude.ai that the user can later choose to share with their teammates. Use this when communicating visually with an image, diagram, or rich HTML/Markdown would be clearer than terminal text.
 
-Write the content to a file first (via Write/Edit), then call Artifact with its path.
+Write the content to a file first (via Write/Edit), then call Artifact with its path. The file is wrapped in a `<!doctype html>…<head>…</head><body>` skeleton at publish time, so write the page content directly — no `<!DOCTYPE>`, `<html>`, `<head>`, or `<body>` tags of your own. Unless the user names a location, put the file in your scratchpad directory if one is listed in your system prompt.
 
 **Content**: Disclose progressively: high level first, supporting detail next. Assume the reader wasn't in the session — what's obvious from the transcript isn't obvious to them. Balance brevity with depth: skimmable at the top, complete underneath.
 

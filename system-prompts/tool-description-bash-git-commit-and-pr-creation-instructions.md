@@ -1,18 +1,25 @@
 <!--
 name: 'Tool Description: Bash (Git commit and PR creation instructions)'
 description: Instructions for creating git commits and GitHub pull requests
-ccVersion: 2.1.162
+ccVersion: 2.1.178
 variables:
-  - BASH_TOOL_NAME
+  - LOADED_COMMANDS_CONTEXT
   - COMMIT_CO_AUTHORED_BY_CLAUDE_CODE
+  - BASH_TOOL_NAME
   - GET_TODO_TOOL_FN
   - TASK_TOOL_NAME
-  - EMPTY_STRING
   - PR_INSTRUCTIONS_PREFIX
+  - EMPTY_STRING
   - PR_GENERATED_WITH_CLAUDE_CODE
   - PR_COMMON_OPERATIONS_NOTE
 -->
-${""}# Committing changes with git
+${LOADED_COMMANDS_CONTEXT.commit?`# Git
+- Never use git commands with the -i flag (like git rebase -i or git add -i) since they require interactive input which is not supported.
+- Only commit when the user explicitly asks. When staging, prefer naming specific files over "git add -A"/"git add ." — never commit files that likely contain secrets (.env, credentials).${COMMIT_CO_AUTHORED_BY_CLAUDE_CODE?`
+- End git commit messages with:
+${COMMIT_CO_AUTHORED_BY_CLAUDE_CODE}`:""}
+
+`:`# Committing changes with git
 
 Only create commits when requested by the user. If unclear, ask first. When the user asks you to create a new git commit, follow these steps carefully:
 
@@ -61,12 +68,12 @@ git commit -m "$(cat <<'EOF'
    )"
 </example>
 
-${EMPTY_STRING?`${EMPTY_STRING}
+`}${PR_INSTRUCTIONS_PREFIX}${EMPTY_STRING?`${EMPTY_STRING}
 
 `:""}# Creating pull requests
 Use the gh command via the Bash tool for ALL GitHub-related tasks including working with issues, pull requests, checks, and releases. If given a Github URL use the gh command to get the information needed.
 
-${PR_INSTRUCTIONS_PREFIX}IMPORTANT: When the user asks you to create a pull request, follow these steps carefully:
+IMPORTANT: When the user asks you to create a pull request, follow these steps carefully:
 
 1. Run the following bash commands in parallel using the ${BASH_TOOL_NAME} tool, in order to understand the current state of the branch since it diverged from the main branch:
    - Run a git status command to see all untracked files (never use -uall flag)
