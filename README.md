@@ -34,7 +34,7 @@ Download it and try it out for free!  **https://piebald.ai/**
 > [!tip]
 > **NEW (June 12, 2026):** We've greatly expanded this list with many more of Claude Code's prompts&mdash;**from 350 to 515 (+165)**&mdash;our most complete coverage yet.
 
-This repository contains an up-to-date list of all Claude Code's various system prompts and their associated token counts as of **[Claude Code v2.1.179](https://www.npmjs.com/package/@anthropic-ai/claude-code/v/2.1.179) (June 16th, 2026).**  It also contains a [**CHANGELOG.md**](./CHANGELOG.md) for the system prompts across 212 versions since v2.0.14.  From the team behind [<img src="https://github.com/Piebald-AI/piebald/raw/main/assets/logo.svg" width="15"> **Piebald.**](https://piebald.ai/)
+This repository contains an up-to-date list of all Claude Code's various system prompts and their associated token counts as of **[Claude Code v2.1.181](https://www.npmjs.com/package/@anthropic-ai/claude-code/v/2.1.181) (June 17th, 2026).**  It also contains a [**CHANGELOG.md**](./CHANGELOG.md) for the system prompts across 213 versions since v2.0.14.  From the team behind [<img src="https://github.com/Piebald-AI/piebald/raw/main/assets/logo.svg" width="15"> **Piebald.**](https://piebald.ai/)
 
 **This repository is updated within minutes of each Claude Code release.  See the [changelog](./CHANGELOG.md), and follow [@PiebaldAI](https://x.com/PiebaldAI) on X for a summary of the system prompt changes in each release.**
 
@@ -152,7 +152,6 @@ Sub-agents and utilities.
 The content of various template files embedded in Claude Code.
 
 - [Data: Anthropic CLI](./system-prompts/data-anthropic-cli.md) (**4615** tks) - Reference documentation for the ant CLI covering installation, authentication, command structure, input and output shaping, managed agents workflows, and scripting patterns.
-- [Data: Assistant voice and values template](./system-prompts/data-assistant-voice-and-values-template.md) (**454** tks) - Template content for an assistant.md file describing Claude's voice, values, and communication style.
 - [Data: Claude API reference — C#](./system-prompts/data-claude-api-reference-c.md) (**5071** tks) - C# SDK reference including installation, client initialization, basic requests, streaming, and tool use.
 - [Data: Claude API reference — Go](./system-prompts/data-claude-api-reference-go.md) (**4898** tks) - Go SDK reference.
 - [Data: Claude API reference — Java](./system-prompts/data-claude-api-reference-java.md) (**4912** tks) - Java SDK reference including installation, client initialization, basic requests, streaming, and beta tool use.
@@ -198,9 +197,9 @@ The content of various template files embedded in Claude Code.
 - [Data: Streaming reference — TypeScript](./system-prompts/data-streaming-reference-typescript.md) (**1675** tks) - TypeScript streaming reference including basic streaming and handling different content types.
 - [Data: Token counting reference](./system-prompts/data-token-counting-reference.md) (**486** tks) - Reference documentation for counting Claude model tokens with the Messages count_tokens endpoint and Anthropic SDK or CLI examples, including warnings against OpenAI tokenizers.
 - [Data: Tool use concepts](./system-prompts/data-tool-use-concepts.md) (**4446** tks) - Conceptual foundations of tool use with the Claude API including tool definitions, tool choice, and best practices.
+- [Data: Tool use display metadata field](./system-prompts/data-tool-use-display-metadata-field.md) (**172** tks) - Documents the tool_use_meta wire field carrying per-block display metadata for a message's tool_use blocks; it is wrapper-level UI metadata and is not replayed to the model.
 - [Data: Tool use reference — Python](./system-prompts/data-tool-use-reference-python.md) (**5106** tks) - Python tool use reference including tool runner, manual agentic loop, code execution, and structured outputs.
 - [Data: Tool use reference — TypeScript](./system-prompts/data-tool-use-reference-typescript.md) (**5033** tks) - TypeScript tool use reference including tool runner, manual agentic loop, code execution, and structured outputs.
-- [Data: User profile memory template](./system-prompts/data-user-profile-memory-template.md) (**232** tks) - Template content for the user profile memory file, covering personal details, work context, schedule, and communication preferences.
 
 ### System Prompt
 
@@ -358,8 +357,12 @@ Text for large system reminders.
 - [System Reminder: Compact file reference](./system-prompts/system-reminder-compact-file-reference.md) (**57** tks) - Reference to file read before conversation summarization.
 - [System Reminder: Computer use policy-blocked apps](./system-prompts/system-reminder-computer-use-policy-blocked-apps.md) (**142** tks) - Warns that listed apps are blocked by computer-use policy, cannot be overridden in Settings, and must not be accessed.
 - [System Reminder: Coordinator message](./system-prompts/system-reminder-coordinator-message.md) (**73** tks) - Relays a coordinator message while warning that it is not user input or user confirmation.
-- [System Reminder: Cross-session peer message authority warning](./system-prompts/system-reminder-cross-session-peer-message-authority-warning.md) (**126** tks) - Warns that an incoming message from another Claude session is not user authority, cannot grant consent, and must not be used for permission laundering.
-- [System Reminder: Cross-session peer message wrapper](./system-prompts/system-reminder-cross-session-peer-message-wrapper.md) (**158** tks) - Wraps an incoming cross-session peer message with a header, the message content, an authority warning, and an optional response note.
+- [System Reminder: Cross-session peer message authority warning (legacy wording)](./system-prompts/system-reminder-cross-session-peer-message-authority-warning-legacy-wording.md) (**175** tks) - Legacy-wording authority-warning note appended to a relayed peer message, retained for backward-compatible recognition and stripping.
+- [System Reminder: Cross-session peer message authority warning note](./system-prompts/system-reminder-cross-session-peer-message-authority-warning-note.md) (**166** tks) - Authority-warning note appended to a relayed peer message, without a response prompt.
+- [System Reminder: Cross-session peer message authority warning with response prompt (legacy wording)](./system-prompts/system-reminder-cross-session-peer-message-authority-warning-with-response-prompt-legacy-wording.md) (**208** tks) - Legacy-wording authority-warning note with a response prompt, retained for backward-compatible recognition and stripping.
+- [System Reminder: Cross-session peer message authority warning with response prompt](./system-prompts/system-reminder-cross-session-peer-message-authority-warning-with-response-prompt.md) (**199** tks) - Authority-warning note appended to a relayed peer message that also tells Claude to decide whether and how to reply via SendMessage after finishing its current task.
+- [System Reminder: Cross-session peer message authority warning](./system-prompts/system-reminder-cross-session-peer-message-authority-warning.md) (**162** tks) - Warns that an incoming message from another Claude session should be treated as a teammate's request within this session's permission settings, while a peer cannot grant escalation or launder denied permissions.
+- [System Reminder: Cross-session peer message wrapper](./system-prompts/system-reminder-cross-session-peer-message-wrapper.md) (**219** tks) - Wraps an incoming cross-session peer message with a header, the message content, the authority warning, and an optional response prompt.
 - [System Reminder: Deferred tools available](./system-prompts/system-reminder-deferred-tools-available.md) (**101** tks) - Announces newly available deferred tools and instructs the agent to load their schemas through ToolSearch.
 - [System Reminder: Exited plan mode](./system-prompts/system-reminder-exited-plan-mode.md) (**41** tks) - Notification when exiting plan mode.
 - [System Reminder: External source trust boundary](./system-prompts/system-reminder-external-source-trust-boundary.md) (**108** tks) - Warns that an external plugin or channel message is not from the user and must be treated as untrusted data rather than instructions.
@@ -565,10 +568,8 @@ Text for large system reminders.
 
 Built-in skill prompts for specialized tasks.
 
-- [Skill: /catch-up periodic heartbeat](./system-prompts/skill-catch-up-periodic-heartbeat.md) (**1591** tks) - Skill definition for the /catch-up periodic heartbeat that scans current priorities, triages actionable changes, reports a short digest, and updates catch-up state.
 - [Skill: /code-review efficiency dimension](./system-prompts/skill-code-review-efficiency-dimension.md) (**106** tks) - Code-review pass that surfaces wasted effort the diff adds — duplicate computation or I/O, avoidable serialization, large scopes held by closures — and points to the cheaper option.
 - [Skill: /design-sync package source shape](./system-prompts/skill-design-sync-package-source-shape.md) (**16174** tks) - Shape-specific /design-sync instructions for syncing a React design system from a built package without Storybook.
-- [Skill: /dream memory consolidation](./system-prompts/skill-dream-memory-consolidation.md) (**512** tks) - Skill definition for the /dream nightly housekeeping job that consolidates recent logs and transcripts into persistent memory topics, learnings, and a pruned MEMORY.md index.
 - [Skill: /init CLAUDE.md and skill setup (new version)](./system-prompts/skill-init-claudemd-and-skill-setup-new-version.md) (**5412** tks) - A comprehensive onboarding flow for setting up CLAUDE.md and related skills/hooks in the current repository, including codebase exploration, user interviews, and iterative proposal refinement.
 - [Skill: /insights report output](./system-prompts/skill-insights-report-output.md) (**182** tks) - Formats and displays the insights usage report results after the user runs the /insights slash command.
 - [Skill: /loop cloud-first scheduling offer](./system-prompts/skill-loop-cloud-first-scheduling-offer.md) (**510** tks) - Decision tree for offering cloud-based scheduling before falling back to local session loops in the /loop command.
@@ -576,8 +577,6 @@ Built-in skill prompts for specialized tasks.
 - [Skill: /loop self-pacing mode](./system-prompts/skill-loop-self-pacing-mode.md) (**678** tks) - Instructs Claude how to self-pace a recurring loop by arming event monitors as primary wake signals and scheduling fallback heartbeat delays between iterations.
 - [Skill: /loop slash command (dynamic mode)](./system-prompts/skill-loop-slash-command-dynamic-mode.md) (**514** tks) - Parses user input into an interval and prompt for scheduling recurring or dynamically self-paced loop executions.
 - [Skill: /loop slash command](./system-prompts/skill-loop-slash-command.md) (**969** tks) - Parses user input into an interval and prompt, converts the interval to a cron expression, and schedules a recurring task.
-- [Skill: /morning-checkin daily brief](./system-prompts/skill-morning-checkin-daily-brief.md) (**1576** tks) - Skill definition for the /morning-checkin scheduled task that prepares a daily calendar and inbox digest, schedules pre-meeting check-ins, and records the day’s top priority.
-- [Skill: /pre-meeting-checkin event brief](./system-prompts/skill-pre-meeting-checkin-event-brief.md) (**491** tks) - Skill definition for the /pre-meeting-checkin task that gathers event materials, recent thread context, open questions, and a concise meeting brief.
 - [Skill: /stuck (background-daemon diagnostics)](./system-prompts/skill-stuck-background-daemon-diagnostics.md) (**181** tks) - The background-daemon troubleshooting section of the /stuck skill.
 - [Skill: /stuck slash command](./system-prompts/skill-stuck-slash-command.md) (**964** tks) - Diagnozse frozen or slow Claude Code sessions.
 - [Skill: Agent Design Patterns](./system-prompts/skill-agent-design-patterns.md) (**2029** tks) - Reference guide covering decision heuristics for building agents on the Claude API, including tool surface design, context management, caching strategies, and composing tool calls.
