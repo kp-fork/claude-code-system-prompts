@@ -1,11 +1,103 @@
 <!--
 name: 'Data: Claude API reference — C#'
 description: C# SDK reference including installation, client initialization, basic requests, streaming, and tool use
-ccVersion: 2.1.176
+ccVersion: 2.1.182
 -->
 # Claude API — C#
 
 > **Note:** The C# SDK is the official Anthropic SDK for C#. Tool use is supported via the Messages API with a beta `BetaToolRunner` for automatic tool execution loops. The SDK also supports Microsoft.Extensions.AI IChatClient integration with function invocation and Managed Agents (beta).
+
+## Namespace Reference
+
+Types are organized by namespace. If a type you need isn't shown in an example below, locate it via this table first — don't block on fetching SDK source over the network.
+
+| `using` | Contains |
+|---|---|
+| `Anthropic` | `AnthropicClient`, top-level options |
+| `Anthropic.Models.Messages` | non-beta request/response types — `MessageCreateParams`, `Model`, `Role`, `ContentBlock`, `TextBlock`, `ToolUseBlock`, `ToolResultBlockParam`, `Tool*` (tool definition classes) |
+| `Anthropic.Models.Beta.Messages` | beta-endpoint equivalents — `MessageCreateParams`, `BetaMessage`, `BetaTool*`, `Speed`, `BetaRequestMcpServerUrlDefinition`, context-editing/compaction configs |
+| `Anthropic.Models.Beta` | shared beta constants |
+| `Anthropic.Models.Beta.Files` | Files API types |
+| `Anthropic.Models.Messages.Batches` | Batch API types |
+| `Anthropic.Helpers.Beta` | `BetaToolRunner`, beta helper utilities |
+| `Anthropic.Exceptions` | `AnthropicApiException`, `AnthropicRateLimitException`, `Anthropic5xxException`, etc. — see `shared/error-codes.md` |
+| `Anthropic.Bedrock` / `Anthropic.Vertex` / `Anthropic.Foundry` / `Anthropic.Aws` | platform clients (separate NuGet packages): `AnthropicBedrockMantleClient`, `AnthropicFoundryClient`, `AnthropicAwsClient` |
+
+`client.Messages.*` uses non-beta types; `client.Beta.Messages.*` uses the `Anthropic.Models.Beta.Messages` types. Both namespaces define a `MessageCreateParams` — pick the one matching the client path you call.
+
+### Key types per feature
+
+Write from this table instead of reflecting the SDK assembly. Endpoint column tells you whether to use `client.Messages.*` or `client.Beta.Messages.*`.
+
+| Feature | Endpoint | Key C# types (namespace per table above) |
+|---|---|---|
+| User profiles | beta | `client.Beta.UserProfiles.Create(...)` / `.Retrieve(id)` / `.List()`. Pass the returned profile id on the beta messages call. Requires a beta header — check the SDK's beta-headers reference for the current flag. |
+| Agent Skills | beta | `BetaContainerParams` (with `Skills = [new BetaSkillParams { ... }]`), `BetaCodeExecutionTool20250825`. `Betas = ["code-execution-2025-08-25", "skills-2025-10-02"]`. Download the output via `client.Beta.Files.Download(fileId)`. |
+| Advisor tool | beta | `BetaAdvisorTool20260301` — may not be in all SDK releases yet |
+| Cache diagnostics | beta | `Diagnostics = new() { PreviousMessageID = … }`, `BetaCacheControlEphemeral`, `BetaContentBlockParam` |
+| Context editing | beta | `ContextManagement = new BetaContextManagementConfig { Edits = [new BetaClearToolUses20250919Edit()] }`. `Betas = ["context-management-2025-06-27"]` (not `compact-2026-01-12` — that's for `BetaCompact20260112Edit`). |
+| Memory tool | non-beta | `Tools = [new ToolUnion(new MemoryTool20250818())]` |
+| Programmatic tool calling | non-beta | `CodeExecutionTool20260120`, `ToolResultBlockParam`, `ContentBlockParam` |
+| Task budgets | beta | `BetaOutputConfig` with `TaskBudget = new BetaTokenTaskBudget { ... }` |
+| Tool search | non-beta | `new ToolUnion(new ToolSearchToolRegex20251119 { Type = ToolSearchToolRegex20251119Type.ToolSearchToolRegex20251119 })` — `Type` must be set explicitly. |
+| Web search | non-beta | `new ToolUnion(new WebSearchTool20260209())` — the latest variant with dynamic filtering (Opus 4.8/4.7/4.6 + Sonnet 4.6). For older models or Vertex, use `WebSearchTool20250305()` |
+
+### Discovering type and member names
+
+If a type or member you need isn't in the tables above, `strings ~/.nuget/packages/anthropic/*/lib/*/Anthropic.dll | grep -i <term>` is fast and sufficient for locating class and property names. **Do not escalate to a `dotnet run` reflection probe** to dump members precisely — the first compile is slow enough to be backgrounded in many environments, trapping you in a polling loop. Instead, write `Program.cs` using the names `strings | grep` found; if a member name is wrong the compiler error (`error CS1061: 'X' does not contain a definition for 'Y'`) points at it in a few seconds, faster than any reflection probe.
+
+Note that `strings` will not surface wire-format snake_case field names (`output_tokens`, `stop_reason`) — those are stored in the DLL differently. **C# properties are the PascalCase equivalent of the wire field** (`response.Usage.OutputTokens`, `response.StopReason`). If you know the wire field name from the docs, write the PascalCase property and compile; do not probe for the snake_case string.
+
+### Minimal working skeleton
+
+**Write a plain `Program.cs` body** — `using` statements followed by top-level statements, as below. Do **not** add a `#!/usr/bin/env dotnet` shebang or `#:package Anthropic@*` directive: those are .NET file-based-app syntax and fail with `CS1024: Preprocessor directive expected` when the file is compiled via an existing `.csproj`. The standard project setup (per the [C# quickstart](https://docs.claude.com/en/docs/get-started): `dotnet new console` → `dotnet add package Anthropic` → edit `Program.cs` → `dotnet run`) provides the `.csproj` and package reference.
+
+Start from this — it compiles as-is. Fill in the feature-specific fields; do not spend turns running reflection or XML-doc inspection to discover type names first.
+
+```csharp
+using System;
+using Anthropic;
+using Anthropic.Models.Messages;       // or Anthropic.Models.Beta.Messages for beta endpoints
+
+AnthropicClient client = new();
+
+var message = await client.Messages.Create(new MessageCreateParams
+{
+    Model = Model.ClaudeOpus4_8,
+    MaxTokens = 1024,
+    Messages = [ new() { Role = Role.User, Content = "Hello, Claude" } ],
+});
+
+Console.WriteLine(message);
+```
+
+For beta features (anything behind an `anthropic-beta` header), use the beta client path and namespace — same overall shape:
+
+```csharp
+using System;
+using Anthropic;
+using Anthropic.Models.Beta.Messages;
+
+AnthropicClient client = new();
+
+var response = await client.Beta.Messages.Create(new MessageCreateParams
+{
+    Model = "{{OPUS_ID}}",
+    MaxTokens = 4096,
+    Betas = ["<beta-flag>"],
+    Messages = [ new() { Role = Role.User, Content = "…" } ],
+    // Tools = new BetaToolUnion[] { new BetaSomeTool { … } },   // for tool features
+});
+
+Console.WriteLine(response);
+```
+
+If a type name the feature needs isn't in this file, write it following the naming pattern in the Namespace Reference above and fix from compiler output — producing a `Program.cs` and iterating beats researching.
+
+### Common C# compile errors
+
+- **CS8803 (top-level statements must precede type declarations):** put any `record`/`class`/`struct` definitions **after** the last top-level statement, at the end of the file. A record defined above `var client = new AnthropicClient()` will not compile.
+- **`await foreach` on a `Task<…Page>`:** `client.Models.List()` returns a `Task<ModelListPage>`, which is not directly async-enumerable. Await it first, then iterate: `var page = await client.Models.List(); foreach (var m in page.Items) {…}`. For auto-pagination, check whether the page type exposes `AutoPagingEachAsync()` or similar before reaching for `await foreach`.
 
 ## Installation
 
@@ -53,35 +145,12 @@ foreach (var text in response.Content.Select(b => b.Value).OfType<TextBlock>())
 
 ---
 
-## Streaming
-
-```csharp
-using Anthropic.Models.Messages;
-
-var parameters = new MessageCreateParams
-{
-    Model = Model.ClaudeOpus4_8,
-    MaxTokens = 64000,
-    Messages = [new() { Role = Role.User, Content = "Write a haiku" }]
-};
-
-await foreach (RawMessageStreamEvent streamEvent in client.Messages.CreateStreaming(parameters))
-{
-    if (streamEvent.TryPickContentBlockDelta(out var delta) &&
-        delta.Delta.TryPickText(out var text))
-    {
-        Console.Write(text.Text);
-    }
-}
-```
-
-**`RawMessageStreamEvent` TryPick methods** (naming drops the `Message`/`Raw` prefix): `TryPickStart`, `TryPickDelta`, `TryPickStop`, `TryPickContentBlockStart`, `TryPickContentBlockDelta`, `TryPickContentBlockStop`. There is no `TryPickMessageStop` — use `TryPickStop`.
-
----
-
 ## Thinking
 
 **Adaptive thinking is the recommended mode for Claude 4.6+ models.** Claude decides dynamically when and how much to think.
+
+> **Fable 5, Opus 4.8, Opus 4.7, Opus 4.6, and Sonnet 4.6:** Use adaptive thinking (below). `new ThinkingConfigEnabled { BudgetTokens = N }` is removed on Fable 5, Opus 4.8, and 4.7 (400 if sent); deprecated on Opus 4.6 and Sonnet 4.6.
+> **Older models:** Use `new ThinkingConfigEnabled { BudgetTokens = N }` (budget must be < `MaxTokens`, min 1024).
 
 ```csharp
 using Anthropic.Models.Messages;
@@ -114,114 +183,13 @@ foreach (var block in response.Content)
 }
 ```
 
-> **Deprecated:** `new ThinkingConfigEnabled { BudgetTokens = N }` (fixed-budget extended thinking) still works on Claude 4.6 but is deprecated. Use adaptive thinking above.
-
 Alternative to `TryPick*`: `.Select(b => b.Value).OfType<ThinkingBlock>()` (same LINQ pattern as the Basic Message example).
-
----
-
-## Tool Use
-
-### Defining a tool
-
-`Tool` (NOT `ToolParam`) with an `InputSchema` record. `InputSchema.Type` is auto-set to `"object"` by the constructor — don't set it. `ToolUnion` has an implicit conversion from `Tool`, triggered by the collection expression `[...]`.
-
-```csharp
-using System.Text.Json;
-using Anthropic.Models.Messages;
-
-var parameters = new MessageCreateParams
-{
-    Model = Model.ClaudeSonnet4_6,
-    MaxTokens = 16000,
-    Tools = [
-        new Tool {
-            Name = "get_weather",
-            Description = "Get the current weather in a given location",
-            InputSchema = new() {
-                Properties = new Dictionary<string, JsonElement> {
-                    ["location"] = JsonSerializer.SerializeToElement(
-                        new { type = "string", description = "City name" }),
-                },
-                Required = ["location"],
-            },
-        },
-    ],
-    Messages = [new() { Role = Role.User, Content = "Weather in Paris?" }],
-};
-```
-
-Derived from `anthropic-sdk-csharp/src/Anthropic/Models/Messages/Tool.cs` and `ToolUnion.cs:799` (implicit conversion).
-
-See [shared tool use concepts](../shared/tool-use-concepts.md) for the loop pattern.
-### Converting response content to the follow-up assistant message
-
-When echoing Claude's response back in the assistant turn, **there is no `.ToParam()` helper** — manually reconstruct each `ContentBlock` variant as its `*Param` counterpart. Do NOT use `new ContentBlockParam(block.Json)`: it compiles and serializes, but `.Value` stays `null` so `TryPick*`/`Validate()` fail (degraded JSON pass-through, not the typed path).
-
-```csharp
-using Anthropic.Models.Messages;
-
-Message response = await client.Messages.Create(parameters);
-
-// No .ToParam() — reconstruct per variant. Implicit conversions from each
-// *Param type to ContentBlockParam mean no explicit wrapper.
-List<ContentBlockParam> assistantContent = [];
-List<ContentBlockParam> toolResults = [];
-foreach (ContentBlock block in response.Content)
-{
-    if (block.TryPickText(out TextBlock? text))
-    {
-        assistantContent.Add(new TextBlockParam { Text = text.Text });
-    }
-    else if (block.TryPickThinking(out ThinkingBlock? thinking))
-    {
-        // Signature MUST be preserved — the API rejects tampering
-        assistantContent.Add(new ThinkingBlockParam
-        {
-            Thinking = thinking.Thinking,
-            Signature = thinking.Signature,
-        });
-    }
-    else if (block.TryPickRedactedThinking(out RedactedThinkingBlock? redacted))
-    {
-        assistantContent.Add(new RedactedThinkingBlockParam { Data = redacted.Data });
-    }
-    else if (block.TryPickToolUse(out ToolUseBlock? toolUse))
-    {
-        // ToolUseBlock has required Caller; ToolUseBlockParam.Caller is optional — don't copy it
-        assistantContent.Add(new ToolUseBlockParam
-        {
-            ID = toolUse.ID,
-            Name = toolUse.Name,
-            Input = toolUse.Input,
-        });
-        // Execute the tool; collect ONE result per tool_use block — the API
-        // rejects the follow-up if any tool_use ID lacks a matching tool_result.
-        string result = ExecuteYourTool(toolUse.Name, toolUse.Input);
-        toolResults.Add(new ToolResultBlockParam
-        {
-            ToolUseID = toolUse.ID,
-            Content = result,
-        });
-    }
-}
-
-// Follow-up: prior messages + assistant echo + user tool_result(s)
-List<MessageParam> followUpMessages =
-[
-    .. parameters.Messages,
-    new() { Role = Role.Assistant, Content = assistantContent },
-    new() { Role = Role.User, Content = toolResults },
-];
-```
-
-`ToolResultBlockParam` has no tuple constructor — use the object initializer. `Content` is a string-or-list union; a plain `string` implicitly converts.
 
 ---
 
 ## Context Editing / Compaction (Beta)
 
-**Beta-namespace prefix is inconsistent** (source-verified against `src/Anthropic/Models/Beta/Messages/*.cs` @ 12.9.0). No prefix: `MessageCreateParams`, `MessageCountTokensParams`, `Role`. **Everything else has the `Beta` prefix**: `BetaMessageParam`, `BetaMessage`, `BetaContentBlock`, `BetaToolUseBlock`, all block param types. The unprefixed `Role` WILL collide with `Anthropic.Models.Messages.Role` if you import both namespaces (CS0104). Safest: import only Beta; if mixing, alias the beta `Role`:
+**Beta-namespace prefix is inconsistent** (source-verified against `src/Anthropic/Models/Beta/Messages/*.cs` @ 12.9.0). No prefix: `MessageCreateParams`, `MessageCountTokensParams`, `Role`, `Speed`. **Everything else has the `Beta` prefix**: `BetaMessageParam`, `BetaMessage`, `BetaContentBlock`, `BetaToolUseBlock`, all block param types. The unprefixed `Role` WILL collide with `Anthropic.Models.Messages.Role` if you import both namespaces (CS0104). Safest: import only Beta; if mixing, alias the beta `Role`:
 
 ```csharp
 using Anthropic.Models.Beta.Messages;
@@ -235,7 +203,7 @@ using NonBeta = Anthropic.Models.Messages;  // only if you also need non-beta ty
 ```csharp
 using Anthropic.Models.Beta.Messages;
 
-var betaParams = new MessageCreateParams   // no Beta prefix — one of only 2 unprefixed
+var betaParams = new MessageCreateParams   // no Beta prefix — see unprefixed list above
 {
     Model = Model.ClaudeOpus4_8,
     MaxTokens = 16000,
@@ -336,25 +304,6 @@ long tokens = result.InputTokens;
 
 ---
 
-## Structured Output
-
-```csharp
-OutputConfig = new OutputConfig {
-    Format = new JsonOutputFormat {
-        Schema = new Dictionary<string, JsonElement> {
-            ["type"] = JsonSerializer.SerializeToElement("object"),
-            ["properties"] = JsonSerializer.SerializeToElement(
-                new { name = new { type = "string" } }),
-            ["required"] = JsonSerializer.SerializeToElement(new[] { "name" }),
-        },
-    },
-},
-```
-
-`JsonOutputFormat.Type` is auto-set to `"json_schema"` by the constructor. `Schema` is `required`.
-
----
-
 ## PDF / Document Input
 
 `DocumentBlockParam` takes a `DocumentBlockParamSource` union: `Base64PdfSource` / `UrlPdfSource` / `PlainTextSource` / `ContentBlockSource`. `Base64PdfSource` auto-sets `MediaType = "application/pdf"` and `Type = "base64"`.
@@ -371,68 +320,30 @@ new MessageParam {
 
 ---
 
-## Server-Side Tools
-
-Web search, bash, text editor, and code execution are built-in server tools. Type names are version-suffixed; constructors auto-set `name`/`type`. All implicit-convert to `ToolUnion`.
+## Fast Mode (Beta)
 
 ```csharp
-Tools = [
-    new WebSearchTool20260209(),
-    new ToolBash20250124(),
-    new ToolTextEditor20250728(),
-    new CodeExecutionTool20260120(),
-],
+var response = await client.Beta.Messages.Create(new MessageCreateParams {
+    Model = "{{OPUS_ID}}", MaxTokens = 4096,
+    Speed = Speed.Fast,
+    Betas = ["fast-mode-2026-02-01"],
+    Messages = [...],
+});
 ```
 
-Also available: `WebFetchTool20260209`, `MemoryTool20250818`. `WebSearchTool20260209` optionals: `AllowedDomains`, `BlockedDomains`, `MaxUses`, `UserLocation`.
-
----
-
-## Files API (Beta)
-
-Files live under `client.Beta.Files` (namespace `Anthropic.Models.Beta.Files`). `BinaryContent` implicit-converts from `Stream` and `byte[]`.
+## Models API
 
 ```csharp
-using Anthropic.Models.Beta.Files;
-using Anthropic.Models.Beta.Messages;
-
-FileMetadata meta = await client.Beta.Files.Upload(
-    new FileUploadParams { File = File.OpenRead("doc.pdf") });
-
-// Referencing the uploaded file requires Beta message types:
-new BetaRequestDocumentBlock {
-    Source = new BetaFileDocumentSource { FileID = meta.ID },
-}
+var page = await client.Models.List();
+foreach (var m in page.Items) { Console.WriteLine(m.ID); }
+var one = await client.Models.Retrieve("{{OPUS_ID}}");
 ```
 
-The non-beta `DocumentBlockParamSource` union has no file-ID variant — file references need `client.Beta.Messages.Create()`.
+## Long Output (128k) + Prefill
 
----
+Set `MaxTokens = 128000` on `client.Messages` and use the streaming path (see `streaming.md`). On Claude 4+ models, 128k output is native — no `output-128k-*` beta header or beta namespace is needed.
 
-## Tool Runner (Beta)
-
-The C# SDK provides a `BetaToolRunner` for automatic tool execution loops. Define tools with raw JSON schemas, and the runner handles the API call → tool execution → result feedback loop.
-
-```csharp
-using Anthropic.Models.Beta.Messages;
-
-// Define tools and create params as shown in the Tool Use section above,
-// but using the beta namespace types (BetaToolUnion, etc.)
-var runner = client.Beta.Messages.ToolRunner(betaParams);
-
-await foreach (BetaMessage message in runner)
-{
-    foreach (var block in message.Content)
-    {
-        if (block.TryPickText(out var text))
-        {
-            Console.WriteLine(text.Text);
-        }
-    }
-}
-```
-
----
+**Prefilling the assistant message** (putting a trailing `Role.Assistant` message in the input) is **not supported** on {{FABLE_NAME}}, Opus 4.8, Opus 4.7, Opus 4.6, and Sonnet 4.6 — requests return a 400. Use `OutputConfig.Format` (structured outputs) instead.
 
 ## Stop Details
 

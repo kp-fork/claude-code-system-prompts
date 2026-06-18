@@ -1,11 +1,48 @@
 <!--
 name: 'Data: Claude API reference — Java'
 description: Java SDK reference including installation, client initialization, basic requests, streaming, and beta tool use
-ccVersion: 2.1.176
+ccVersion: 2.1.182
 -->
 # Claude API — Java
 
 > **Note:** The Java SDK supports the Claude API and beta tool use with annotated classes. Agent SDK is not yet available for Java.
+
+## Package Reference
+
+Types are organized by package. If a class you need isn't shown in an example below, locate it via this table first — don't block on fetching SDK source over the network.
+
+| `import` prefix | Contains |
+|---|---|
+| `com.anthropic.client` / `com.anthropic.client.okhttp` | `AnthropicClient`, `AnthropicOkHttpClient` |
+| `com.anthropic.models.messages` | non-beta request/response types — `MessageCreateParams`, `Model`, `Message`, `TextBlockParam`, `ContentBlockParam`, `ToolUseBlockParam`, `ToolResultBlockParam`, `CacheControlEphemeral`, `Tool*` (e.g. `ToolBash20250124`, `ToolTextEditor20250728`), `StopReason`, `StructuredMessage*` |
+| `com.anthropic.models.messages.batches` | Batch API — `BatchResultsParams`, `MessageBatchIndividualResponse` |
+| `com.anthropic.models.beta` | `AnthropicBeta` (beta-flag constants) |
+| `com.anthropic.models.beta.messages` | beta-endpoint types — `MessageCreateParams`, `BetaMessage`, `BetaStopReason`, `BetaContextManagementConfig`, `BetaMcpToolset`, `BetaRequestMcpServerUrlDefinition`, `BetaTool*` |
+| `com.anthropic.core` | `JsonValue`, `JsonField`, `JsonSchemaLocalValidation`, `com.anthropic.core.http.StreamResponse` |
+| `com.anthropic.errors` | typed exceptions — `AnthropicServiceException`, `RateLimitException`, `NotFoundException`, etc. (see `shared/error-codes.md`) |
+
+`client.messages()` uses `com.anthropic.models.messages.*`; `client.beta().messages()` uses `com.anthropic.models.beta.messages.*`. Both packages define a `MessageCreateParams` — import the one matching the client path you call.
+
+### Key types per feature
+
+Write from this table instead of `javap`/jar inspection. Endpoint column tells you whether to use `client.messages()` or `client.beta().messages()`.
+
+| Feature | Endpoint | Key Java types / builder calls |
+|---|---|---|
+| User profiles | beta | `client.beta().userProfiles().create(...)` / `.retrieve(id)` / `.list()`. Pass the returned profile id on the beta `MessageCreateParams`. Requires a beta header — check the SDK's beta-headers reference for the current flag. |
+| Agent Skills | beta | `BetaContainerParams`, `BetaSkillParams`, `BetaCodeExecutionTool20250825`. `.addBeta("code-execution-2025-08-25").addBeta("skills-2025-10-02")`. Download the output via `client.beta().files().download(fileId)`. |
+| Cache diagnostics | beta | `BetaDiagnosticsParam`, `BetaCacheControlEphemeral` |
+| Context editing | beta | `.contextManagement(BetaContextManagementConfig.builder()…)`. The edit strategy is a `BetaClearToolUses20250919Edit` (or `BetaClearThinking20251015Edit`); its trigger is a `BetaInputTokensTrigger` built separately and passed to the edit's builder — there is no direct `.inputTokensTrigger(N)` shortcut on the edit builder. `javap` the edit and trigger classes for the exact setter names. |
+| Memory tool | non-beta | `.addTool(MemoryTool20250818.builder().build())` from `com.anthropic.models.messages` |
+| Programmatic tool calling | non-beta | `CodeExecutionTool20260120`, `Tool`, `ContentBlockParam` |
+| Strict tool use | non-beta | `Tool`, `Tool.InputSchema` |
+| Task budgets | beta | `.outputConfig(BetaOutputConfig.builder().taskBudget(BetaTokenTaskBudget.builder()...))` |
+| Tool search | non-beta | `.addTool(ToolSearchToolRegex20251119.builder()...)` from `com.anthropic.models.messages` |
+| Web search | non-beta | `WebSearchTool20260209` from `com.anthropic.models.messages` — the latest variant with dynamic filtering (Opus 4.8/4.7/4.6 + Sonnet 4.6). For older models or Vertex, use `WebSearchTool20250305` |
+
+### Discovering type and member names
+
+If a class or builder method you need isn't in the tables above, `jar tf <anthropic-java-core jar> | grep -i <term>` or `javap -classpath <jar> com.anthropic.models.…` is fast enough to locate names. **Do not compile and run a separate reflection program** to enumerate members — the first build is slow enough to be backgrounded in many environments, trapping you in a polling loop. Write the script with the names you found and let the compiler error (`cannot find symbol`) point at any wrong member.
 
 ## Installation
 
@@ -63,31 +100,12 @@ response.content().stream()
 
 ---
 
-## Streaming
-
-```java
-import com.anthropic.core.http.StreamResponse;
-import com.anthropic.models.messages.RawMessageStreamEvent;
-
-MessageCreateParams params = MessageCreateParams.builder()
-    .model(Model.CLAUDE_OPUS_4_8)
-    .maxTokens(64000L)
-    .addUserMessage("Write a haiku")
-    .build();
-
-try (StreamResponse<RawMessageStreamEvent> streamResponse = client.messages().createStreaming(params)) {
-    streamResponse.stream()
-        .flatMap(event -> event.contentBlockDelta().stream())
-        .flatMap(deltaEvent -> deltaEvent.delta().text().stream())
-        .forEach(textDelta -> System.out.print(textDelta.text()));
-}
-```
-
----
-
 ## Thinking
 
 **Adaptive thinking is the recommended mode for Claude 4.6+ models.** Claude decides dynamically when and how much to think. The builder has a direct `.thinking(ThinkingConfigAdaptive)` overload — no manual union wrapping.
+
+> **Fable 5, Opus 4.8, Opus 4.7, Opus 4.6, and Sonnet 4.6:** Use adaptive thinking (below). `ThinkingConfigEnabled.builder().budgetTokens(N)` is removed on Fable 5, Opus 4.8, and 4.7 (400 if sent); deprecated on Opus 4.6 and Sonnet 4.6.
+> **Older models:** Use `.thinking(ThinkingConfigEnabled.builder().budgetTokens(N).build())` (budget must be < `maxTokens`, min 1024).
 
 ```java
 import com.anthropic.models.messages.ContentBlock;
@@ -108,136 +126,7 @@ for (ContentBlock block : client.messages().create(params).content()) {
 }
 ```
 
-> **Deprecated:** `ThinkingConfigEnabled.builder().budgetTokens(N)` (and the `.enabledThinking(N)` shortcut) still works on Claude 4.6 but is deprecated. Use adaptive thinking above.
-
 `ContentBlock` narrowing: `.thinking()` / `.text()` return `Optional<T>` — use `.ifPresent(...)` or `.stream().flatMap(...)`. Alternative: `isThinking()` / `asThinking()` boolean+unwrap pairs (throws on wrong variant).
-
----
-
-## Tool Use (Beta)
-
-The Java SDK supports beta tool use with annotated classes. Tool classes implement `Supplier<String>` for automatic execution via `BetaToolRunner`.
-
-### Tool Runner (automatic loop)
-
-```java
-import com.anthropic.models.beta.messages.MessageCreateParams;
-import com.anthropic.models.beta.messages.BetaMessage;
-import com.anthropic.helpers.BetaToolRunner;
-import com.fasterxml.jackson.annotation.JsonClassDescription;
-import com.fasterxml.jackson.annotation.JsonPropertyDescription;
-import java.util.function.Supplier;
-
-@JsonClassDescription("Get the weather in a given location")
-static class GetWeather implements Supplier<String> {
-    @JsonPropertyDescription("The city and state, e.g. San Francisco, CA")
-    public String location;
-
-    @Override
-    public String get() {
-        return "The weather in " + location + " is sunny and 72°F";
-    }
-}
-
-BetaToolRunner toolRunner = client.beta().messages().toolRunner(
-    MessageCreateParams.builder()
-        .model("{{OPUS_ID}}")
-        .maxTokens(16000L)
-        .putAdditionalHeader("anthropic-beta", "structured-outputs-2025-11-13")
-        .addTool(GetWeather.class)
-        .addUserMessage("What's the weather in San Francisco?")
-        .build());
-
-for (BetaMessage message : toolRunner) {
-    System.out.println(message);
-}
-```
-
-### Memory Tool
-
-The Java SDK provides `BetaMemoryToolHandler` for implementing the memory tool backend. You supply a handler that manages file storage, and the `BetaToolRunner` handles memory tool calls automatically.
-
-```java
-import com.anthropic.helpers.BetaMemoryToolHandler;
-import com.anthropic.helpers.BetaToolRunner;
-import com.anthropic.models.beta.messages.BetaMemoryTool20250818;
-import com.anthropic.models.beta.messages.BetaMessage;
-import com.anthropic.models.beta.messages.MessageCreateParams;
-import com.anthropic.models.beta.messages.ToolRunnerCreateParams;
-
-// Implement BetaMemoryToolHandler with your storage backend (e.g., filesystem)
-BetaMemoryToolHandler memoryHandler = new FileSystemMemoryToolHandler(sandboxRoot);
-
-MessageCreateParams createParams = MessageCreateParams.builder()
-    .model("{{OPUS_ID}}")
-    .maxTokens(4096L)
-    .addTool(BetaMemoryTool20250818.builder().build())
-    .addUserMessage("Remember that my favorite color is blue")
-    .build();
-
-BetaToolRunner toolRunner = client.beta().messages().toolRunner(
-    ToolRunnerCreateParams.builder()
-        .betaMemoryToolHandler(memoryHandler)
-        .initialMessageParams(createParams)
-        .build());
-
-for (BetaMessage message : toolRunner) {
-    System.out.println(message);
-}
-```
-
-See the [shared memory tool concepts](../shared/tool-use-concepts.md) for more details on the memory tool.
-
-### Non-Beta Tool Declaration (manual JSON schema)
-
-`Tool.InputSchema.Properties` is a freeform `Map<String, JsonValue>` wrapper — build property schemas via `putAdditionalProperty`. `type: "object"` is the default. The builder has a direct `.addTool(Tool)` overload that wraps in `ToolUnion` automatically.
-
-```java
-import com.anthropic.core.JsonValue;
-import com.anthropic.models.messages.Tool;
-
-Tool tool = Tool.builder()
-    .name("get_weather")
-    .description("Get the current weather in a given location")
-    .inputSchema(Tool.InputSchema.builder()
-        .properties(Tool.InputSchema.Properties.builder()
-            .putAdditionalProperty("location", JsonValue.from(Map.of("type", "string")))
-            .build())
-        .required(List.of("location"))
-        .build())
-    .build();
-
-MessageCreateParams params = MessageCreateParams.builder()
-    .model(Model.CLAUDE_SONNET_4_6)
-    .maxTokens(16000L)
-    .addTool(tool)
-    .addUserMessage("Weather in Paris?")
-    .build();
-```
-
-For manual tool loops, handle `tool_use` blocks in the response, send `tool_result` back, loop until `stop_reason` is `"end_turn"`. See [shared tool use concepts](../shared/tool-use-concepts.md).
-
-### Building `MessageParam` with Content Blocks (Tool Result Round-Trip)
-
-`MessageParam.Content` is an inner union class (string | list). Use the builder's `.contentOfBlockParams(List<ContentBlockParam>)` alias — there is NO separate `MessageParamContent` class with a static `ofBlockParams`:
-
-```java
-import com.anthropic.models.messages.MessageParam;
-import com.anthropic.models.messages.ContentBlockParam;
-import com.anthropic.models.messages.ToolResultBlockParam;
-
-List<ContentBlockParam> results = List.of(
-    ContentBlockParam.ofToolResult(ToolResultBlockParam.builder()
-        .toolUseId(toolUseBlock.id())
-        .content(yourResultString)
-        .build())
-);
-
-MessageParam toolResultMsg = MessageParam.builder()
-    .role(MessageParam.Role.USER)
-    .contentOfBlockParams(results)   // builder alias for Content.ofBlockParams(...)
-    .build();
-```
 
 ---
 
@@ -295,35 +184,6 @@ long tokens = client.messages().countTokens(
 
 ---
 
-## Structured Output
-
-The class-based overload auto-derives the JSON schema from your POJO and gives you a typed `.text()` return — no manual schema, no manual parsing.
-
-```java
-import com.anthropic.models.messages.StructuredMessageCreateParams;
-
-record Book(String title, String author) {}
-record BookList(List<Book> books) {}
-
-StructuredMessageCreateParams<BookList> params = MessageCreateParams.builder()
-    .model(Model.CLAUDE_SONNET_4_6)
-    .maxTokens(16000L)
-    .outputConfig(BookList.class)  // returns a typed builder
-    .addUserMessage("List 3 classic novels")
-    .build();
-
-client.messages().create(params).content().stream()
-    .flatMap(cb -> cb.text().stream())
-    .forEach(typed -> {
-        // typed.text() returns BookList, not String
-        for (Book b : typed.text().books()) System.out.println(b.title());
-    });
-```
-
-Supports Jackson annotations: `@JsonPropertyDescription`, `@JsonIgnore`, `@ArraySchema(minItems=...)`. Manual schema path: `OutputConfig.builder().format(JsonOutputFormat.builder().schema(...).build())`.
-
----
-
 ## PDF / Document Input
 
 `DocumentBlockParam` builder has source shortcuts. Wrap in `ContentBlockParam.ofDocument()` and pass via `.addUserMessageOfBlockParams()`.
@@ -334,81 +194,18 @@ import com.anthropic.models.messages.ContentBlockParam;
 import com.anthropic.models.messages.TextBlockParam;
 
 DocumentBlockParam doc = DocumentBlockParam.builder()
-    .base64Source(base64String)  // or .urlSource("https://...") or .textSource("...")
+    .source(Base64PdfSource.builder().data(base64String).build())
+    // or .source(UrlPdfSource.builder().url("https://...").build())
     .title("My Document")        // optional
     .build();
+```
 
+For **Files API** document references, use the beta path and beta types — see `files-api.md`: `BetaRequestDocumentBlock.builder().source(BetaFileDocumentSource.builder().fileId(id).build())`.
+
+```java
 .addUserMessageOfBlockParams(List.of(
     ContentBlockParam.ofDocument(doc),
     ContentBlockParam.ofText(TextBlockParam.builder().text("Summarize this").build())))
-```
-
----
-
-## Server-Side Tools
-
-Version-suffixed types; `name`/`type` auto-set by builder. Direct `.addTool()` overloads exist for every type — no manual `ToolUnion` wrapping.
-
-```java
-import com.anthropic.models.messages.WebSearchTool20260209;
-import com.anthropic.models.messages.ToolBash20250124;
-import com.anthropic.models.messages.ToolTextEditor20250728;
-import com.anthropic.models.messages.CodeExecutionTool20260120;
-
-.addTool(WebSearchTool20260209.builder()
-    .maxUses(5L)                              // optional
-    .allowedDomains(List.of("example.com"))   // optional
-    .build())
-.addTool(ToolBash20250124.builder().build())
-.addTool(ToolTextEditor20250728.builder().build())
-.addTool(CodeExecutionTool20260120.builder().build())
-```
-
-Also available: `WebFetchTool20260209`, `MemoryTool20250818`, `ToolSearchToolBm25_20251119`. For the advisor tool, use `BetaAdvisorTool20260301` in the beta namespace.
-
-### Beta namespace (MCP, compaction)
-
-For beta-only features use `com.anthropic.models.beta.messages.*` — class names have a `Beta` prefix AND live in the beta package. The beta `MessageCreateParams.Builder` has direct `.addTool(BetaToolBash20250124)` overloads AND `.addMcpServer()`:
-
-```java
-import com.anthropic.models.beta.messages.MessageCreateParams;
-import com.anthropic.models.beta.messages.BetaToolBash20250124;
-import com.anthropic.models.beta.messages.BetaCodeExecutionTool20260120;
-import com.anthropic.models.beta.messages.BetaRequestMcpServerUrlDefinition;
-
-MessageCreateParams params = MessageCreateParams.builder()
-    .model(Model.CLAUDE_OPUS_4_8)
-    .maxTokens(16000L)
-    .addBeta("mcp-client-2025-11-20")
-    .addTool(BetaToolBash20250124.builder().build())
-    .addTool(BetaCodeExecutionTool20260120.builder().build())
-    .addMcpServer(BetaRequestMcpServerUrlDefinition.builder()
-        .name("my-server")
-        .url("https://example.com/mcp")
-        .build())
-    .addUserMessage("...")
-    .build();
-
-client.beta().messages().create(params);
-```
-
-`BetaTool*` types are NOT interchangeable with non-beta `Tool*` — pick one namespace per request.
-
-**Reading server-tool blocks in the response:** `ServerToolUseBlock` has `.id()`, `.name()` (enum), and `._input()` returning raw `JsonValue` — there is NO typed `.input()`. For code execution results, unwrap two levels:
-
-```java
-for (ContentBlock block : response.content()) {
-    block.serverToolUse().ifPresent(stu -> {
-        System.out.println("tool: " + stu.name() + " input: " + stu._input());
-    });
-    block.codeExecutionToolResult().ifPresent(r -> {
-        r.content().resultBlock().ifPresent(result -> {
-            System.out.println("stdout: " + result.stdout());
-            System.out.println("stderr: " + result.stderr());
-            System.out.println("exit: " + result.returnCode());
-        });
-    });
-}
 ```
 
 ---
@@ -444,25 +241,3 @@ try {
 
 ---
 
-## Files API (Beta)
-
-Under `client.beta().files()`. File references in messages need the beta message types (non-beta `DocumentBlockParam.Source` has no file-ID variant).
-
-```java
-import com.anthropic.models.beta.files.FileUploadParams;
-import com.anthropic.models.beta.files.FileMetadata;
-import com.anthropic.models.beta.messages.BetaRequestDocumentBlock;
-import java.nio.file.Paths;
-
-FileMetadata meta = client.beta().files().upload(
-    FileUploadParams.builder()
-        .file(Paths.get("/path/to/doc.pdf"))  // or .file(InputStream) or .file(byte[])
-        .build());
-
-// Reference in a beta message:
-BetaRequestDocumentBlock doc = BetaRequestDocumentBlock.builder()
-    .fileSource(meta.id())
-    .build();
-```
-
-Other methods: `.list()`, `.delete(String fileId)`, `.download(String fileId)`, `.retrieveMetadata(String fileId)`.
