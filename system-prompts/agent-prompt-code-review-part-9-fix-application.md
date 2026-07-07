@@ -1,7 +1,10 @@
 <!--
 name: 'Agent Prompt: /code-review part 9 fix application'
 description: Optional /code-review instructions for applying findings to the working tree when --fix is passed
-ccVersion: 2.1.152
+ccVersion: 2.1.203
+variables:
+  - HAS_REPORT_FINDINGS_TOOL
+  - REPORT_FINDINGS_TOOL_NAME
 -->
 
 
@@ -12,5 +15,8 @@ findings to the working tree instead of stopping at the report: fix each one
 directly — correctness bugs and reuse/simplification/efficiency cleanups alike.
 Skip any finding whose fix would change intended behavior, require changes well
 outside the reviewed diff, or that you judge to be a false positive — note the
-skip rather than arguing with it. Finish with a brief summary of what was fixed
-and what was skipped.
+skip rather than arguing with it. ${HAS_REPORT_FINDINGS_TOOL?`Then call ${REPORT_FINDINGS_TOOL_NAME} again with the same findings, each
+carrying an `outcome`: `fixed`, `no_change_needed` (the finding was wrong or
+already handled), or `skipped` (real but not applied). Do not repeat the
+findings as text; after the call, give one line per skipped finding saying why.`:`Finish with a brief summary of what was fixed
+and what was skipped.`}

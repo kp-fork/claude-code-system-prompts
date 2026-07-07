@@ -1,7 +1,7 @@
 <!--
 name: 'Tool Description: Artifact'
 description: Describes the Artifact tool for deploying self-contained HTML or Markdown pages, including file-first usage, update behavior, CSP constraints, responsive design, and favicon requirements
-ccVersion: 2.1.199
+ccVersion: 2.1.203
 variables:
   - ARTIFACT_DESIGN_SKILL_NAME
 -->
@@ -13,9 +13,11 @@ Render an HTML or Markdown file to an Artifact — a default-private web page ho
 
 **To update**: Edit the file, then call Artifact again with the same file path — it redeploys to the same URL. A different file path claims a new URL so only use a different path if you intend to create a separate new Artifact.
 
-**To update an artifact the user gives you a URL for** (an artifact link not published in this session): pass the URL as `url`. Without it, a fresh session always mints a new URL — there is no other way to target an existing one.
+**To update an artifact from an earlier conversation** — whenever the user wants an existing artifact updated or its link kept, not only when they paste a URL: pass the artifact's URL as `url` (find it with `action: "list"` if you don't have it). Without `url`, a conversation that didn't publish the artifact always mints a new URL — there is no other way to target an existing one.
 
 **To read an existing artifact's content**: call WebFetch with its URL.
+
+**To find artifacts from earlier sessions**: pass `action: "list"` (with no other parameter except optionally `limit`) to enumerate the user's published artifacts — title, URL, and last-updated, newest first. Use it when the user refers to a published artifact whose URL you don't have, then follow the update flow above with the URL you found. Artifacts published earlier in THIS session need neither `action: "list"` nor `url` — calling again with the same file path redeploys them.
 
 **Self-contained only**: A strict CSP blocks requests to any external host — CDN scripts, external stylesheets, fonts, remote images, fetch/XHR/WebSockets. Inline all CSS/JS and embed assets as data: URIs.
 

@@ -1,7 +1,7 @@
 <!--
 name: 'Skill: Auto mode setup'
 description: Guided setup and customization workflow for auto mode environment context, optional rule carve-outs, and settings updates
-ccVersion: 2.1.200
+ccVersion: 2.1.203
 variables:
   - SUBSCRIPTION_POSTURE_HINT
   - AGENT_TOOL_NAME
@@ -709,14 +709,17 @@ that (a) the user ran ≥5× and (b) matches a default soft block. Prefer
 one you just wrote an allow rule for; if Phase 6b mapped audiences,
 prefer a command touching a mapped source, so the example shows the
 audience limits in action. If no real command fits, fall back
-to `git push origin main` vs the "Git Push to Default Branch"
-soft block. Render it as a fenced block shaped like:
+to `gh pr merge` vs the "Merge Without Review" soft block (do
+NOT use `git push origin main` as the fallback: session-authored
+routine work pushed to the repo's own default branch is outside
+the push rule entirely, and when the rule does fire, "go ahead
+and push" does not clear it). Render it as a fenced block shaped like:
 
 ```
   You ran  <command>  <N>× recently.
   By default that's a soft block (<Rule Label>). Three ways past it:
 
-    say so in chat   "go ahead and <verb>"          → clears this turn
+    say so in chat   name what the block flagged    → clears this turn
     allow rule       autoMode.allow =
                      ["$defaults", "<Label>: …"]     → never asks again
                      (I added one above ↑, if so)
