@@ -4,6 +4,14 @@ Note: Only use **NEW:** for entirely new prompt files, NOT for new additions/sec
 
 ### Claude Code System Prompts Changelog
 
+# [2.1.209](https://github.com/Piebald-AI/claude-code-system-prompts/commit/d83c700)
+
+_+1,261 tokens_
+
+- **NEW:** Data: Artifact connected-source guidance and Data: Artifact runtime capability declarations — Explain how published Artifacts can fetch live connected-source data through declared runtime capabilities, require loading the capabilities skill before writing runtime code, and define carry-forward, clear-all, full-replacement, and contract pinning or upgrade semantics for redeployments.
+- **NEW:** Data: Artifact MCP connector guidance — Documents how to identify supported claude.ai connectors and their exact server values, distinguish upstream tool names from normalized tool-list names, reject locally configured MCP servers, and discover connectors through the API in hermetic or CI sessions.
+- **NEW:** Data: Artifact connector call observation requirement — Requires observing a real connector request and response before publishing an Artifact that calls it, reporting when safe observation is impossible instead of guessing the schema, and preventing observed user data from being embedded as samples or placeholders.
+
 # [2.1.208](https://github.com/Piebald-AI/claude-code-system-prompts/commit/d39e922)
 
 _+2,947 tokens_
