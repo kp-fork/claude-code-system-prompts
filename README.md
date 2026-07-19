@@ -34,7 +34,7 @@ Download it and try it out for free!  **https://piebald.ai/**
 > [!tip]
 > **NEW (June 12, 2026):** We've greatly expanded this list with many more of Claude Code's prompts&mdash;**from 350 to 515 (+165)**&mdash;our most complete coverage yet.
 
-This repository contains an up-to-date list of all Claude Code's various system prompts and their associated token counts as of **[Claude Code v2.1.214](https://www.npmjs.com/package/@anthropic-ai/claude-code/v/2.1.214) (July 17th, 2026).**  It also contains a [**CHANGELOG.md**](./CHANGELOG.md) for the system prompts across 240 versions since v2.0.14.  From the team behind [<img src="https://github.com/Piebald-AI/piebald/raw/main/assets/logo.svg" width="15"> **Piebald.**](https://piebald.ai/)
+This repository contains an up-to-date list of all Claude Code's various system prompts and their associated token counts as of **[Claude Code v2.1.215](https://www.npmjs.com/package/@anthropic-ai/claude-code/v/2.1.215) (July 18th, 2026).**  It also contains a [**CHANGELOG.md**](./CHANGELOG.md) for the system prompts across 241 versions since v2.0.14.  From the team behind [<img src="https://github.com/Piebald-AI/piebald/raw/main/assets/logo.svg" width="15"> **Piebald.**](https://piebald.ai/)
 
 **This repository is updated within minutes of each Claude Code release.  See the [changelog](./CHANGELOG.md), and follow [@PiebaldAI](https://x.com/PiebaldAI) on X for a summary of the system prompt changes in each release.**
 
@@ -245,7 +245,6 @@ Parts of the main system prompt.
 - [System Prompt: /loop tick (loop.md tasks)](./system-prompts/system-prompt-loop-tick-loopmd-tasks.md) (**94** tks) - Loop tick injection for recurring cron-based runs of tasks from loop.md.
 - [System Prompt: /loop tick (loop.md tasks, dynamic pacing)](./system-prompts/system-prompt-loop-tick-loopmd-tasks-dynamic-pacing.md) (**174** tks) - Loop tick injection for dynamic self-paced runs of tasks from loop.md.
 - [System Prompt: Act when ready](./system-prompts/system-prompt-act-when-ready.md) (**68** tks) - Instructs the agent to act once it has enough information and give recommendations instead of exhaustive surveys.
-- [System Prompt: Action safety and truthful reporting](./system-prompts/system-prompt-action-safety-and-truthful-reporting.md) (**190** tks) - Requires confirmation for irreversible or outward-facing actions, checking targets before destructive edits, and truthful reporting of outcomes.
 - [System Prompt: Advisor tool instructions](./system-prompts/system-prompt-advisor-tool-instructions.md) (**443** tks) - Instructions for using the Advisor tool.
 - [System Prompt: Agent Summary Generation](./system-prompts/system-prompt-agent-summary-generation.md) (**178** tks) - System prompt used for "Agent Summary" generation.
 - [System Prompt: Agent thread notes](./system-prompts/system-prompt-agent-thread-notes.md) (**293** tks) - Behavioral guidelines for agent threads covering absolute paths, response formatting, emoji avoidance, and tool call punctuation.
@@ -355,6 +354,7 @@ Parts of the main system prompt.
 - [System Prompt: Shared git stash safety](./system-prompts/system-prompt-shared-git-stash-safety.md) (**201** tks) - Warns that git stash is shared across worktrees and sessions, preferring WIP commits or uniquely tagged stash entries.
 - [System Prompt: Skillify Current Session](./system-prompts/system-prompt-skillify-current-session.md) (**1798** tks) - System prompt for converting the current session in to a skill.
 - [System Prompt: Subagent delegation examples](./system-prompts/system-prompt-subagent-delegation-examples.md) (**620** tks) - Provides example interactions showing how a coordinator agent should delegate tasks to subagents, handle waiting states, and report results.
+- [System Prompt: Subagent delegation restraint](./system-prompts/system-prompt-subagent-delegation-restraint.md) (**479** tks) - Guides Claude to delegate work only when it is genuinely independent, large enough to justify a fresh context, or naturally parallel, while avoiding excessive or redundant subagents and not redoing delegated work.
 - [System Prompt: System section](./system-prompts/system-prompt-system-section.md) (**93** tks) - System section of the main system prompt.
 - [System Prompt: Task approval continuity](./system-prompts/system-prompt-task-approval-continuity.md) (**109** tks) - Instructs the agent to continue agreed tasks end to end without unnecessary re-confirmation.
 - [System Prompt: Tasks vs memory guidance](./system-prompts/system-prompt-tasks-vs-memory-guidance.md) (**80** tks) - Explains when to use tasks instead of saving current-conversation progress to memory.
@@ -503,14 +503,14 @@ Text for large system reminders.
 - [Tool Description: Edit single replacement](./system-prompts/tool-description-edit-single-replacement.md) (**120** tks) - Tool description for performing exact string replacement in a file, including prior-read and line-prefix requirements.
 - [Tool Description: Edit](./system-prompts/tool-description-edit.md) (**202** tks) - Tool for performing exact string replacements in files.
 - [Tool Description: EndConversation](./system-prompts/tool-description-endconversation.md) (**1452** tks) - Defines when the assistant may use the EndConversation tool and the safety constraints that forbid ending the conversation.
-- [Tool Description: EnterPlanMode](./system-prompts/tool-description-enterplanmode.md) (**1274** tks) - Tool description for entering plan mode to explore and design implementation approaches.
+- [Tool Description: EnterPlanMode](./system-prompts/tool-description-enterplanmode.md) (**1296** tks) - Tool description for entering plan mode to explore and design implementation approaches.
 - [Tool Description: EnterWorktree](./system-prompts/tool-description-enterworktree.md) (**1062** tks) - Tool description for the EnterWorktree tool.
 - [Tool Description: ExitPlanMode](./system-prompts/tool-description-exitplanmode.md) (**648** tks) - Description for the ExitPlanMode tool, which presents a plan dialog for the user to approve.
 - [Tool Description: ExitWorktree](./system-prompts/tool-description-exitworktree.md) (**527** tks) - Roughly, the reverse of the ExitWorktree.
 - [Tool Description: Glob compact](./system-prompts/tool-description-glob-compact.md) (**0** tks) - Compact Glob tool description served to newer models — file pattern matching returning paths sorted by modification time.
-- [Tool Description: Glob](./system-prompts/tool-description-glob.md) (**0** tks) - Tool description for file pattern matching and searching by name.
+- [Tool Description: Glob](./system-prompts/tool-description-glob.md) (**90** tks) - Tool description for file pattern matching and searching by name.
 - [Tool Description: Grep compact](./system-prompts/tool-description-grep-compact.md) (**0** tks) - Compact Grep tool description served to newer models — ripgrep-backed content search preferred over raw grep/rg, with permission-UI integration.
-- [Tool Description: Grep](./system-prompts/tool-description-grep.md) (**300** tks) - Tool description for content search using ripgrep.
+- [Tool Description: Grep](./system-prompts/tool-description-grep.md) (**433** tks) - Tool description for content search using ripgrep.
 - [Tool Description: Invoke skill](./system-prompts/tool-description-invoke-skill.md) (**424** tks) - Tool description for invoking available skills, including skill name selection, optional arguments, scoped skill names, and avoiding duplicate invocation when a skill is already loaded.
 - [Tool Description: LSP](./system-prompts/tool-description-lsp.md) (**298** tks) - Description for the LSP tool.
 - [Tool Description: ListAgents](./system-prompts/tool-description-listagents.md) (**215** tks) - Describes the ListAgents tool, which lists agents you can message — in-process subagents, other local and cloud Claude sessions, and remote bridge sessions.
@@ -557,8 +557,8 @@ Text for large system reminders.
 
 **Additional notes for some Tool Descriptions**
 
-- [Tool Description: Agent (simple usage notes)](./system-prompts/tool-description-agent-simple-usage-notes.md) (**585** tks) - Simplified usage notes for the Agent tool, including when to delegate, fork behavior, resumption, worktree isolation, background execution, parallel launches, and context restrictions.
-- [Tool Description: Agent (usage notes)](./system-prompts/tool-description-agent-usage-notes.md) (**1439** tks) - Usage notes and instructions for the Task/Agent tool, including guidance on launching subagents, background execution, resumption, and worktree isolation.
+- [Tool Description: Agent (simple usage notes)](./system-prompts/tool-description-agent-simple-usage-notes.md) (**634** tks) - Simplified usage notes for the Agent tool, including when to delegate, fork behavior, resumption, worktree isolation, background execution, parallel launches, and context restrictions.
+- [Tool Description: Agent (usage notes)](./system-prompts/tool-description-agent-usage-notes.md) (**1501** tks) - Usage notes and instructions for the Task/Agent tool, including guidance on launching subagents, background execution, resumption, and worktree isolation.
 - [Tool Description: Agent (when to launch subagents)](./system-prompts/tool-description-agent-when-to-launch-subagents.md) (**0** tks) - Describes _when_ to use the Agent tool - for launching specialized subagent subprocesses to autonomously handle complex multi-step tasks.
 - [Tool Description: AskUserQuestion (preview field)](./system-prompts/tool-description-askuserquestion-preview-field.md) (**134** tks) - Instructions for using the HTML preview field on single-select question options to display visual artifacts like UI mockups, code snippets, and diagrams.
 - [Tool Description: Background monitor (streaming events)](./system-prompts/tool-description-background-monitor-streaming-events.md) (**2082** tks) - Describes the background monitor tool that streams stdout events from long-running scripts as chat notifications, with guidelines on script quality, output volume, and selective filtering.
